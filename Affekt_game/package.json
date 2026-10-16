@@ -1,0 +1,17 @@
+{
+  "name": "affekt-game",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "server": "python server/server.py"
+  },
+  "dependencies": {
+    "pixi.js": "^8.6.6"
+  },
+  "devDependencies": {
+    "vite": "^5.4.10"
+  }
+}

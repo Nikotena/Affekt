@@ -1,0 +1,162 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Affekt Town</title>
+  <style>
+    /* Paleta y tipografia alineadas con la landing (KANKEI_landingpage/src/styles/tokens.css), tema oscuro */
+    :root {
+      --color-light: #b8c2b9;      /* gris verdoso claro */
+      --color-dark: #382b26;       /* marron oscuro */
+      --ink-strong: #2b201c;       /* marron mas profundo: fondo de pagina */
+      --ink-soft: #5b524d;
+      --paper: #dfe4e0;            /* texto principal */
+      --paper-raised: #eef1ed;
+      --light-soft: #d5dbd4;
+      --muted: #98a399;            /* texto secundario sobre marron */
+      --rule: rgba(184, 194, 185, .24);
+      --rule-strong: rgba(184, 194, 185, .4);
+      --radius-md: 8px; --radius-lg: 14px; --radius-pill: 999px;
+      --shadow-card: 0 22px 48px -30px rgba(0, 0, 0, .65);
+      --font-display: 'Playfair Display', 'Iowan Old Style', 'Palatino Linotype', Palatino, Georgia, 'Times New Roman', serif;
+      --font-body: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      --font-mono: ui-monospace, Consolas, 'Cascadia Mono', monospace;
+      /* colores de datos: siguen siendo reconocibles (verde/rojo/azul), un poco mas calidos */
+      --good: #7fcf9d; --bad: #e0705f; --calm: #86aee0;
+    }
+    html, body { margin: 0; min-height: 100%; background: var(--ink-strong); color: var(--paper); font-family: var(--font-body); }
+    .muted { color: var(--muted); }
+    html.embed #panel { display: none; } /* incrustado en la landing: solo el juego, sin el panel tecnico */
+    #wrap { display: flex; gap: 12px; padding: 12px; justify-content: center; align-items: flex-start; flex-wrap: wrap; }
+    #game canvas { display: block; border: 1px solid var(--rule-strong); border-radius: 4px; box-shadow: var(--shadow-card); }
+    #panel { width: 300px; font-size: 13px; line-height: 1.45; background: var(--color-dark); border: 1px solid var(--rule); border-radius: var(--radius-md); padding: 12px 14px; box-shadow: var(--shadow-card); }
+    /* titulos de seccion con el estilo de "eyebrow" de la landing: mayusculas y letra espaciada */
+    #panel h3 { margin: 12px 0 6px; font-size: 11px; font-weight: 600; letter-spacing: .14em; text-transform: uppercase; color: var(--color-light); }
+    #npcname { font-weight: 600; color: var(--paper); }
+    .bar { height: 8px; background: var(--ink-strong); border-radius: 4px; margin: 2px 0 8px; position: relative; }
+    .bar > i { position: absolute; top: 0; bottom: 0; background: var(--good); border-radius: 4px; }
+    .bar.z > i { background: var(--bad); } .bar.w > i { background: var(--calm); }
+    .bar .mid { position: absolute; left: 50%; top: -2px; bottom: -2px; width: 1px; background: var(--muted); }
+    #payload, #memory { white-space: pre-wrap; color: var(--light-soft); font-family: var(--font-mono); font-size: 12px; }
+    #status.off { color: var(--bad); } #status.on { color: var(--good); }
+    #start { position: fixed; inset: 0; z-index: 10; display: flex; align-items: center; justify-content: center; background: rgba(43, 32, 28, .94); }
+    #start[hidden] { display: none; }
+    #start .card { max-width: 440px; margin: 16px; padding: 28px 30px; background: var(--color-dark); border: 1px solid var(--rule); border-radius: var(--radius-lg); box-shadow: var(--shadow-card); text-align: center; }
+    #start h1 { margin: 0 0 6px; font-family: var(--font-display); font-weight: 800; font-size: 32px; line-height: 1.05; letter-spacing: .02em; color: var(--paper); }
+    #start .sub { margin: 0 0 18px; color: var(--light-soft); font-size: 14px; line-height: 1.55; }
+    #start ul { margin: 0 0 20px; padding: 0; list-style: none; text-align: left; font-size: 13px; line-height: 1.7; color: var(--paper); }
+    #start li::before { content: "\203A\00A0\00A0"; color: var(--color-light); }
+    /* boton principal: igual que "Download" en la landing (pildora, fondo gris verdoso, texto marron) */
+    #start button, #chatform button[type=submit] { font: inherit; font-weight: 600; letter-spacing: .02em; cursor: pointer; background: var(--color-light); color: var(--color-dark); border: 1px solid transparent; border-radius: var(--radius-pill); transition: background-color .18s, transform .18s; }
+    #start button { font-size: 15px; padding: 12px 34px; letter-spacing: .12em; }
+    #start button:hover, #start button:focus-visible, #chatform button[type=submit]:hover { background: var(--paper-raised); transform: translateY(-1px); }
+    #start button:focus-visible { outline: 2px solid var(--paper); outline-offset: 2px; }
+    #start .note { margin: 16px 0 0; font-size: 11px; color: var(--muted); }
+    #keybox { margin: 0 0 16px; text-align: left; }
+    #keybox[hidden] { display: none; }
+    #keybox label { display: block; font-size: 12px; color: var(--light-soft); margin-bottom: 6px; }
+    #keybox input { box-sizing: border-box; width: 100%; font: inherit; font-size: 16px; padding: 9px 14px; color: var(--paper); background: var(--ink-strong); border: 1px solid var(--rule-strong); border-radius: var(--radius-pill); }
+    #keymsg { min-height: 1.4em; margin: 6px 4px 0; font-size: 12px; color: var(--muted); }
+    #keymsg.ok { color: var(--good); } #keymsg.bad { color: var(--bad); }
+    #start button:disabled { opacity: .45; cursor: not-allowed; transform: none; }
+    #start .linkbtn, #tools button { font: inherit; font-size: 12px; letter-spacing: .04em; padding: 6px 12px; cursor: pointer; color: var(--color-light); background: transparent; border: 1px solid var(--rule-strong); border-radius: var(--radius-pill); }
+    #start .linkbtn { margin-top: 12px; }
+    #start .linkbtn:hover, #tools button:hover { background: rgba(184, 194, 185, .12); transform: none; color: var(--color-light); }
+    #tools { position: fixed; top: 8px; right: 8px; z-index: 6; display: flex; gap: 6px; }
+    #tools[hidden] { display: none; }
+    #tools button { background: var(--color-dark); }
+    #toolmsg { position: fixed; top: 44px; right: 8px; z-index: 6; max-width: 260px; font-size: 12px; padding: 6px 10px; border-radius: var(--radius-md); background: var(--color-dark); border: 1px solid var(--rule); color: var(--paper); }
+    #toolmsg:empty { display: none; }
+    /* instrucciones segun el dispositivo */
+    .touch-only { display: none; } body.touch .touch-only { display: block; } body.touch #start li.touch-only { display: list-item; } body.touch .kbd-only { display: none; }
+    #game canvas { touch-action: manipulation; }
+    /* barra de chat tactil (fuera de #wrap, para que no la afecte el escalado) */
+    #chatbar { position: fixed; left: 0; right: 0; bottom: 0; z-index: 5; padding: 10px 10px 12px; background: var(--color-dark); border-top: 1px solid var(--rule-strong); box-shadow: 0 -12px 30px -18px rgba(0, 0, 0, .7); }
+    #chatbar[hidden] { display: none; }
+    #replyrow { display: flex; gap: 8px; align-items: flex-start; }
+    #reply-spin { flex: none; image-rendering: pixelated; filter: invert(1); /* el spinner es oscuro: se aclara sobre la barra */ }
+    #reply-spin[hidden] { display: none; }
+    #reply { flex: 1; font-size: 14px; line-height: 1.4; color: var(--paper); padding: 0 2px 8px; max-height: 6em; overflow-y: auto; }
+    #reply:empty { display: none; }
+    #chips { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 8px; -webkit-overflow-scrolling: touch; }
+    #chips button { flex: none; font: inherit; font-size: 13px; padding: 8px 14px; color: var(--color-light); background: transparent; border: 1px solid var(--rule-strong); border-radius: var(--radius-pill); cursor: pointer; }
+    #chips button:hover, #chips button:active { background: rgba(184, 194, 185, .12); }
+    #chatform { display: flex; gap: 6px; }
+    #chat { flex: 1; min-width: 0; font: inherit; font-size: 16px; /* 16px: iOS no hace zoom al enfocar */ padding: 9px 14px; color: var(--paper); background: var(--ink-strong); border: 1px solid var(--rule-strong); border-radius: var(--radius-pill); }
+    #chat::placeholder { color: var(--muted); }
+    #chat:focus { outline: 2px solid var(--color-light); outline-offset: 1px; }
+    #chatform button { font-size: 14px; padding: 9px 18px; }
+    #chatform #chat-leave { background: transparent; color: var(--color-light); border: 1px solid var(--rule-strong); padding: 9px 14px; font: inherit; cursor: pointer; border-radius: var(--radius-pill); }
+    body.touch #wrap { padding-bottom: 190px; } /* deja sitio a la barra de chat */
+    /* movil / ventana estrecha: mapa a todo el ancho y panel debajo, sin escalar el texto */
+    @media (max-width: 760px) {
+      #wrap { flex-direction: column; flex-wrap: nowrap; align-items: stretch; padding: 8px; gap: 8px; }
+      #game { width: 100%; position: sticky !important; top: 0; z-index: 3; background: var(--ink-strong); } /* !important: audio.js fija position:relative en linea; el mapa y el dialogo se quedan a la vista al hacer scroll */
+      #game canvas { width: 100% !important; height: auto !important; }
+      #panel { width: auto; box-sizing: border-box; }
+    }
+  </style>
+</head>
+<body>
+  <div id="wrap">
+    <div id="game"></div>
+    <div id="panel">
+      <h3 style="margin-top:0">Affekt Core <span id="status">…</span></h3>
+      <div id="npcname" style="margin-bottom:2px">— no NPC —</div>
+      <div id="meta" class="muted" style="margin-bottom:6px"></div>
+      <div id="clock" class="muted" style="margin-bottom:6px"></div>
+      <div>X valence <span id="vx"></span></div><div class="bar"><span class="mid"></span><i id="bx"></i></div>
+      <div>Y initiative <span id="vy"></span></div><div class="bar"><span class="mid"></span><i id="by"></i></div>
+      <div>Z stress <span id="vz"></span></div><div class="bar z"><i id="bz"></i></div>
+      <div>W inertia <span id="vw"></span></div><div class="bar w"><i id="bw"></i></div>
+      <h3>LLM payload</h3><div id="payload">—</div>
+      <h3>Memory (medium term)</h3><div id="memory">—</div>
+      <h3>Controls</h3>
+      <div class="kbd-only muted">WASD / arrows: move · E: talk · or click the ground / villagers<br>While talking: type and press Enter · Esc: leave<br>M: music</div>
+      <div class="touch-only muted">Tap the ground to walk · tap a villager to talk<br>While talking: tap a phrase or type, then Send · ✕ to leave<br>Speaker button: music</div>
+    </div>
+  </div>
+  <div id="start">
+    <div class="card">
+      <h1>AFFEKT TOWN</h1>
+      <p class="sub">A town where every character has a mood and a memory.<br>What you say changes how they treat you.</p>
+      <ul>
+        <li class="touch-only"><b>Tap the ground</b> to walk, <b>tap a villager</b> to talk</li>
+        <li class="touch-only">Tap a quick phrase or type anything in plain <b>English</b>, then <b>Send</b></li>
+        <li class="kbd-only"><b>WASD</b> or arrows to walk, <b>E</b> next to someone to talk (or click the ground and the villagers)</li>
+        <li class="kbd-only">Type anything in plain <b>English</b> and press <b>Enter</b></li>
+        <li>Try being kind, then rude. Watch the panel: mood, stress and memory change</li>
+        <li class="touch-only"><b>✕</b> leaves the conversation</li>
+        <li class="kbd-only"><b>Esc</b> leaves the conversation, <b>M</b> toggles music</li>
+      </ul>
+      <div id="keybox" hidden>
+        <label for="key">Paste your AMD Token Factory API key. It stays in this tab only, is never saved, and is sent over HTTPS just to ask the model.</label>
+        <input id="key" type="password" autocomplete="off" spellcheck="false" autocapitalize="off" placeholder="Your AMD Token Factory API key" />
+        <div id="keymsg" aria-live="polite"></div>
+      </div>
+      <button id="start-btn" type="button">START</button>
+      <div><button id="load-btn" class="linkbtn" type="button">Load a saved session</button></div>
+      <input id="load-file" type="file" accept="application/json,.json" hidden />
+      <p class="note">Replies are written by a language model. Facts like prices come from the game engine.</p>
+    </div>
+  </div>
+  <div id="tools" hidden><button id="save-btn" type="button">Save session</button><button id="load-btn2" type="button">Load session</button></div>
+  <div id="toolmsg" role="status"></div>
+  <div id="chatbar" hidden>
+    <div id="replyrow">
+      <img id="reply-spin" src="/loading/loading1.png" alt="" width="24" height="24" hidden />
+      <div id="reply" aria-live="polite"></div>
+    </div>
+    <div id="chips"></div>
+    <form id="chatform" autocomplete="off">
+      <input id="chat" type="text" maxlength="140" enterkeyhint="send" autocapitalize="sentences" autocomplete="off" placeholder="Say something in English…" aria-label="Your message" />
+      <button type="submit">Send</button>
+      <button type="button" id="chat-leave" aria-label="Leave the conversation">✕</button>
+    </form>
+  </div>
+  <script type="module" src="/src/start.js"></script>
+  <script type="module" src="/src/chatbar.js"></script>
+  <script type="module" src="/src/main.js"></script>
+</body>
+</html>

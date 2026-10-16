@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Affekt Map Editor</title>
+  <style>
+    html, body { margin: 0; height: 100%; background: #14111c; color: #e8e2d4; font: 12px ui-monospace, Consolas, monospace; }
+    #app { display: flex; height: 100%; }
+    #side { width: 270px; flex: none; overflow-y: auto; background: #1d1829; border-right: 2px solid #3a3150; padding: 10px; box-sizing: border-box; }
+    #main { flex: 1; overflow: auto; padding: 10px; }
+    h3 { margin: 12px 0 6px; font-size: 13px; color: #f2c46d; }
+    h3:first-child { margin-top: 0; }
+    input, select, button { background: #2c2640; color: #e8e2d4; border: 1px solid #4a4068; font: inherit; padding: 3px 6px; margin: 2px 0; }
+    input[type=number] { width: 52px; } input[type=text] { width: 110px; }
+    button { cursor: pointer; } button:hover { background: #3a3150; }
+    .tool.on { background: #f2c46d; color: #14111c; }
+    .row { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; }
+    canvas { image-rendering: pixelated; }
+    #map { border: 2px solid #3a3150; cursor: crosshair; display: block; }
+    #pal canvas { display: block; margin-bottom: 6px; border: 1px solid #3a3150; cursor: pointer; }
+    #msg { color: #6dd3a0; min-height: 1.4em; } .hint { color: #7d739a; }
+  </style>
+</head>
+<body>
+  <div id="app">
+    <div id="side">
+      <h3>Map</h3>
+      <div class="row">
+        <input id="name" type="text" value="village" />
+        <button id="save">Save</button>
+      </div>
+      <div class="row">
+        <select id="maplist"></select><button id="load">Open</button>
+      </div>
+      <div class="row">
+        <input id="w" type="number" min="4" max="200" value="30" />x<input id="h" type="number" min="4" max="200" value="20" />
+        <button id="resize">Resize</button><button id="new">New</button>
+      </div>
+      <div id="msg"></div>
+
+      <h3>Layer</h3>
+      <div class="row">
+        <button class="layer on tool" data-layer="tiles" data-n="1">1 · Ground</button>
+        <button class="layer tool" data-layer="tiles" data-n="2">2 · Objects</button>
+        <button class="layer tool" data-layer="tiles" data-n="3" title="Drawn OVER the player and NPCs">3 · Overhead</button>
+        <button class="layer tool" data-layer="objects">Collision / NPC</button>
+      </div>
+      <div class="row">Zoom <input id="zoom" type="range" min="1" max="6" value="3" /> <label><input id="grid" type="checkbox" checked /> grid</label></div>
+
+      <div id="tilesTools">
+        <h3>Tool</h3>
+        <div class="row">
+          <button class="tool on" data-tool="brush">Brush</button>
+          <button class="tool" data-tool="fill">Fill</button>
+          <button class="tool" data-tool="erase">Erase</button>
+          <button class="tool" data-tool="decor" title="Layer 3 only">Animated decor</button>
+        </div>
+        <div class="row">Type <select id="decorType"></select></div>
+        <div class="hint">Decor: click = bottom-left tile of the object. Tick the tiles that block movement (red on the map). Right-click removes it.</div>
+        <div id="decorSolid" style="display:grid;gap:2px;margin:4px 0"></div>
+        <h3>Tilesets (16x16)</h3>
+        <div class="row"><select id="tslist"></select><button id="addts">Use</button></div>
+        <div class="row"><input id="upload" type="file" accept="image/png" /></div>
+        <div class="hint">Upload a PNG: 16x16 = one tile; larger = tile sheet on a 16px grid.</div>
+        <div id="pal"></div>
+      </div>
+
+      <div id="objTools" hidden>
+        <h3>Tool</h3>
+        <div class="row">
+          <button class="tool on" data-tool="collision">Collision</button>
+          <button class="tool" data-tool="exit">Exit</button>
+          <button class="tool" data-tool="spawn">Spawn</button>
+          <button class="tool" data-tool="npc">NPC</button>
+          <button class="tool" data-tool="eraseobj">Erase obj.</button>
+        </div>
+        <h3>Options</h3>
+        <div class="row">Collision <select id="colShape">
+          <option value="15">Full</option>
+          <optgroup label="Halves">
+            <option value="3">Top half</option><option value="12">Bottom half</option>
+            <option value="5">Left half</option><option value="10">Right half</option>
+          </optgroup>
+          <optgroup label="Quarters">
+            <option value="1">Top-left quarter</option><option value="2">Top-right quarter</option>
+            <option value="4">Bottom-left quarter</option><option value="8">Bottom-right quarter</option>
+          </optgroup>
+        </select></div>
+        <div class="row"><label><input id="colMerge" type="checkbox" /> add to the tile (combine shapes)</label></div>
+        <div class="row">Exit ID <input id="exId" type="text" value="house1" /></div>
+        <div class="hint">Two exits with the same ID, one in each map, are connected. When you cross, you appear on the partner exit.</div>
+        <div class="row">Spawn name <input id="spName" type="text" value="start" /></div>
+        <div class="hint">Spawn "start" = the player's starting position.</div>
+        <div class="row">NPC <select id="npcId"></select></div>
+        <div class="hint">Left-click places/paints · right-click erases</div>
+      </div>
+    </div>
+    <div id="main"><canvas id="map"></canvas></div>
+  </div>
+  <script type="module" src="/src/editor.js"></script>
+</body>
+</html>

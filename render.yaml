@@ -1,0 +1,16 @@
+# Blueprint de Render: un solo servicio Docker (juego + API en el mismo origen).
+services:
+  - type: web
+    name: affekt
+    runtime: docker
+    plan: starter
+    healthCheckPath: /healthz
+    envVars:
+      - key: AFFEKT_BYOK
+        value: "1"                 # 1 = cada jugador pone su clave (publico). 0 = demo en vivo con la clave del servidor
+      - key: AFFEKT_FRAME_ANCESTORS
+        value: "'self' https://affeck-demo.vercel.app"   # quien puede incrustar el juego (la landing)
+      - key: AMD_API_KEY           # solo se usa con AFFEKT_BYOK=0
+        sync: false                # se escribe en el panel de Render, nunca en el repo
+      - key: OPENROUTER_API_KEY    # OPCIONAL, solo con AFFEKT_BYOK=0: ultimo respaldo si AMD falla
+        sync: false
