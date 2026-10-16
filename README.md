@@ -49,6 +49,10 @@ Tests (standard library only): `cd Affekt_core && python -m unittest discover -s
 
 Signed session ids, per-session and per-IP rate limits, request size caps, strict validation of session files, CSP with `frame-ancestors` and no CORS by default.
 
+## Credits
+
+The music, sprites and tilesets are CC0 (public domain) assets from [OpenGameArt](https://opengameart.org/).
+
 ## License
 
 MIT, see [LICENSE](LICENSE).
