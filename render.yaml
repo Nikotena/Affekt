@@ -12,5 +12,3 @@ services:
         value: "'self' https://affeck-demo.vercel.app"   # quien puede incrustar el juego (la landing)
       - key: AMD_API_KEY           # solo se usa con AFFEKT_BYOK=0
         sync: false                # se escribe en el panel de Render, nunca en el repo
-      - key: OPENROUTER_API_KEY    # OPCIONAL, solo con AFFEKT_BYOK=0: ultimo respaldo si AMD falla
-        sync: false

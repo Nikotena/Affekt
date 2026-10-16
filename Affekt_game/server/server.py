@@ -17,7 +17,7 @@ Sin clave, los NPC responden con lineas fijas segun su humor.
     GET  /healthz                          ->  {"ok": true}
     GET  /*                                ->  ../dist (juego compilado), si existe
 
-Modo desarrollo: AFFEKT_BYOK=0 usa las claves del entorno o de Affekt_core/.env (AMD_API_KEY, OPENROUTER_API_KEY).
+Modo desarrollo: AFFEKT_BYOK=0 usa las claves del entorno o de Affekt_core/.env (AMD_API_KEY).
 Variables: AFFEKT_HOST, PORT, AFFEKT_BYOK, AFFEKT_ALLOWED_ORIGIN, AFFEKT_TRUST_PROXY, AFFEKT_FORCE_STUB,
 AFFEKT_AMD_MODEL, AFFEKT_AMD_BACKUP_MODEL, AFFEKT_PRIMARY_TIMEOUT, AFFEKT_SESSION_PER_MIN, AFFEKT_IP_PER_MIN, AFFEKT_MAX_TEXT.
 """
@@ -69,9 +69,6 @@ BYOK = os.environ.get("AFFEKT_BYOK", "1") != "0"
 AMD_MODEL = os.environ.get("AFFEKT_AMD_MODEL", "Gemma-4-31B-IT")
 AMD_BACKUP_MODEL = os.environ.get("AFFEKT_AMD_BACKUP_MODEL", "MiMo-V2.6-Flash")  # tambien en AMD; "none" lo quita
 PRIMARY_TIMEOUT = float(os.environ.get("AFFEKT_PRIMARY_TIMEOUT", 15))
-PROVIDER = os.environ.get("AFFEKT_PROVIDER", "amd").lower()                      # solo modo desarrollo
-FALLBACK = os.environ.get("AFFEKT_FALLBACK", "1") != "0"                          # solo modo desarrollo
-OPENROUTER_MODEL = os.environ.get("AFFEKT_OPENROUTER_MODEL", "google/gemma-4-31b-it")  # solo modo desarrollo
 
 HOST = os.environ.get("AFFEKT_HOST", "127.0.0.1")           # en la nube: 0.0.0.0
 PORT = _int("PORT", _int("AFFEKT_PORT", 8765))
@@ -100,25 +97,14 @@ STUB = StubBackend()
 # ---------------------------------------------------------------- modelo: claves del servidor (solo desarrollo)
 def build_server_llm():
     """Cadena con las claves del entorno. Solo se usa con AFFEKT_BYOK=0 (desarrollo local y capturas)."""
-    from modules.ApiBackend import OpenRouterBackend
-
     def amd(model):
         return lambda: AMDBackend(model=model, temperature=0.5, timeout=30.0, retries=2)
-
-    def openrouter():
-        return OpenRouterBackend(model=OPENROUTER_MODEL, disable_reasoning=False, temperature=0.5,
-                                 timeout=30.0, retries=2, min_interval=3.2)
 
     amd_chain = [("amd", amd(AMD_MODEL))]
     if AMD_BACKUP_MODEL and AMD_BACKUP_MODEL.lower() != "none" and AMD_BACKUP_MODEL != AMD_MODEL:
         amd_chain.append(("amd-backup", amd(AMD_BACKUP_MODEL)))
-    makers = amd_chain + [("openrouter", openrouter)]
-    if PROVIDER == "openrouter":
-        makers = [("openrouter", openrouter)] + amd_chain
     backends = []
-    for name, make in makers:
-        if backends and not FALLBACK:
-            break
+    for name, make in amd_chain:
         try:
             backends.append(make())
         except APIError:
