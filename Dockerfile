@@ -16,7 +16,7 @@ COPY --from=web --chown=user /app/Affekt_game/dist ./Affekt_game/dist
 USER user
 ENV PYTHONUNBUFFERED=1 PYTHONDONTWRITEBYTECODE=1 \
     AFFEKT_HOST=0.0.0.0 PORT=7860 AFFEKT_TRUST_PROXY=1 \
-    AFFEKT_FRAME_ANCESTORS="'self' https://affeck-demo.vercel.app http://localhost:* http://127.0.0.1:*" \
+    AFFEKT_FRAME_ANCESTORS="'self' https://affekt-demo.vercel.app http://localhost:* http://127.0.0.1:*" \
     AFFEKT_DAILY_LLM_CAP=1500 AFFEKT_SESSION_LLM_MAX=100 AFFEKT_IP_PER_MIN=120
 # Modo por defecto: cada jugador pega su propia clave de AMD Token Factory (el servidor no guarda ninguna).
 # Modo demo en vivo: en el panel de Render pon AFFEKT_BYOK=0 y AMD_API_KEY; vuelve a 1 para cerrarlo.

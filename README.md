@@ -2,7 +2,7 @@
 
 **NPCs that feel and remember.** Affekt is a narrative engine that gives game characters an emotional state, a three-layer memory and awareness of their world, so they answer players in character without inventing facts. Built for the **AMD Developer Hackathon: ACT III** (Track 4, Vibe Generation).
 
-- **Play it:** https://affeck-demo.vercel.app/ (opens the full game on Render)
+- **Play it:** https://affekt-demo.vercel.app/ (opens the full game on Render)
 - **Engine only:** [Nikotena/Affekt_core](https://github.com/Nikotena/Affekt_core/) (the standalone core)
 - **Engine docs (in this repo):** [Affekt_core/README.md](Affekt_core/README.md), [AMD usage](Affekt_core/docs/amd.md), [evaluation](Affekt_core/docs/evaluation.md)
 
