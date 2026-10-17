@@ -5,11 +5,11 @@
 
 Modo publico (por defecto, BYOK = "bring your own key"): el servidor NO tiene claves de ningun modelo. Cada jugador pega
 su clave de AMD Token Factory en la pantalla de inicio; viaja en la cabecera X-AMD-Key en cada peticion, se usa para
-llamar a AMD con Gemma 4 (y MiMo de respaldo) y se descarta. No se guarda en disco, ni en la sesion, ni en los registros.
+llamar a AMD con Gemma 4 y se descarta. No se guarda en disco, ni en la sesion, ni en los registros.
 Sin clave, los NPC responden con lineas fijas segun su humor.
 
     POST /api/action {npc_id, text, hour}  ->  {line, mood, intent, provider, llm_used, price_guard, payload, npc, ...}
-    POST /api/key/check                    ->  {ok, gemma, backup, reason}   (prueba la clave con una llamada minima)
+    POST /api/key/check                    ->  {ok, gemma, reason}   (prueba la clave con una llamada minima)
     GET  /api/state                        ->  estado 4D y memoria de cada NPC
     GET  /api/session/export               ->  archivo JSON de la sesion (emociones y memoria; sin clave)
     POST /api/session/import               ->  restaura ese archivo (validado) en la sesion actual
@@ -19,7 +19,7 @@ Sin clave, los NPC responden con lineas fijas segun su humor.
 
 Modo desarrollo: AFFEKT_BYOK=0 usa las claves del entorno o de Affekt_core/.env (AMD_API_KEY).
 Variables: AFFEKT_HOST, PORT, AFFEKT_BYOK, AFFEKT_ALLOWED_ORIGIN, AFFEKT_TRUST_PROXY, AFFEKT_FORCE_STUB,
-AFFEKT_AMD_MODEL, AFFEKT_AMD_BACKUP_MODEL, AFFEKT_PRIMARY_TIMEOUT, AFFEKT_SESSION_PER_MIN, AFFEKT_IP_PER_MIN, AFFEKT_MAX_TEXT.
+AFFEKT_AMD_MODEL, AFFEKT_LLM_TIMEOUT, AFFEKT_SESSION_PER_MIN, AFFEKT_IP_PER_MIN, AFFEKT_MAX_TEXT.
 """
 import hashlib
 import hmac
@@ -67,8 +67,7 @@ def _int(name, default):
 # ---------------------------------------------------------------- configuracion
 BYOK = os.environ.get("AFFEKT_BYOK", "1") != "0"
 AMD_MODEL = os.environ.get("AFFEKT_AMD_MODEL", "Gemma-4-31B-IT")
-AMD_BACKUP_MODEL = os.environ.get("AFFEKT_AMD_BACKUP_MODEL", "MiMo-V2.6-Flash")  # tambien en AMD; "none" lo quita
-PRIMARY_TIMEOUT = float(os.environ.get("AFFEKT_PRIMARY_TIMEOUT", 15))
+LLM_TIMEOUT = float(os.environ.get("AFFEKT_LLM_TIMEOUT", 25))
 
 HOST = os.environ.get("AFFEKT_HOST", "127.0.0.1")           # en la nube: 0.0.0.0
 PORT = _int("PORT", _int("AFFEKT_PORT", 8765))
@@ -96,26 +95,11 @@ STUB = StubBackend()
 
 # ---------------------------------------------------------------- modelo: claves del servidor (solo desarrollo)
 def build_server_llm():
-    """Cadena con las claves del entorno. Solo se usa con AFFEKT_BYOK=0 (desarrollo local y capturas)."""
-    def amd(model):
-        return lambda: AMDBackend(model=model, temperature=0.5, timeout=30.0, retries=2)
-
-    amd_chain = [("amd", amd(AMD_MODEL))]
-    if AMD_BACKUP_MODEL and AMD_BACKUP_MODEL.lower() != "none" and AMD_BACKUP_MODEL != AMD_MODEL:
-        amd_chain.append(("amd-backup", amd(AMD_BACKUP_MODEL)))
-    backends = []
-    for name, make in amd_chain:
-        try:
-            backends.append(make())
-        except APIError:
-            print(f"[bridge] sin clave para {name}; se omite")
-    if not backends:
-        raise APIError("ninguna clave de LLM disponible")
-    for b in backends[:-1]:
-        b.timeout, b.retries = PRIMARY_TIMEOUT, 0
-    llm = FailoverBackend(backends)
+    """Modelo con la clave del entorno (AMD_API_KEY): Gemma 4 en AMD Token Factory. Solo se usa con AFFEKT_BYOK=0."""
+    backend = AMDBackend(model=AMD_MODEL, temperature=0.5, timeout=LLM_TIMEOUT, retries=2)  # APIError si no hay clave
+    llm = FailoverBackend([backend])
     llm.shots = 2
-    print("[bridge] LLM del servidor: " + " -> ".join(describe(b) for b in backends), flush=True)
+    print("[bridge] LLM del servidor: " + describe(backend), flush=True)
     return llm
 
 
@@ -129,51 +113,31 @@ LLM_ON = SERVER_LLM is not None
 
 
 def user_llm(key, sess):
-    """Cadena de ESTA peticion con la clave del jugador: Gemma 4 y, si falla o esta saturada, MiMo (ambos en AMD).
-    La clave vive solo en estos objetos, que se descartan al terminar la peticion."""
-    backends = [AMDBackend(model=AMD_MODEL, api_key=key, temperature=0.5, timeout=PRIMARY_TIMEOUT, retries=0,
-                           min_interval=0.0)]
-    if AMD_BACKUP_MODEL and AMD_BACKUP_MODEL.lower() != "none" and AMD_BACKUP_MODEL != AMD_MODEL:
-        backends.append(AMDBackend(model=AMD_BACKUP_MODEL, api_key=key, temperature=0.5, timeout=30.0, retries=1,
-                                   min_interval=0.0))
-    llm = FailoverBackend(backends, state=sess["llm_state"])  # solo recuerda que modelo fallo (sin claves)
+    """Modelo de ESTA peticion con la clave del jugador: Gemma 4 en AMD Token Factory.
+    La clave vive solo en este objeto, que se descarta al terminar la peticion."""
+    backend = AMDBackend(model=AMD_MODEL, api_key=key, temperature=0.5, timeout=LLM_TIMEOUT, retries=1, min_interval=0.0)
+    llm = FailoverBackend([backend], state=sess["llm_state"])  # solo recuerda que modelo fallo (sin claves)
     llm.shots = 2
     return llm
 
 
 def check_key(key):
-    """Prueba la clave con una llamada minima a cada modelo. Devuelve el resultado, nunca la clave."""
-    out = {"ok": False, "gemma": False, "backup": False, "reason": None}
-    probe = [{"role": "user", "content": "Say OK."}]
-    results = {}
-
-    def run(field, model):  # los dos modelos se prueban a la vez: la espera es la del mas lento, no la suma
-        try:
-            AMDBackend(model=model, api_key=key, timeout=15.0, retries=0, min_interval=0.0).complete(probe, max_tokens=8)
-            results[field] = None
-        except APIError as e:
-            results[field] = str(e)
-        except Exception as e:  # noqa: BLE001
-            results[field] = type(e).__name__
-
-    threads = [threading.Thread(target=run, args=(f, m), daemon=True)
-               for f, m in (("gemma", AMD_MODEL), ("backup", AMD_BACKUP_MODEL)) if m and m.lower() != "none"]
-    for t in threads:
-        t.start()
-    for t in threads:
-        t.join(25)
-    for field, err in results.items():
-        if err is None:
-            out[field] = True
-        elif err.startswith(("HTTP 401", "HTTP 403")):
+    """Prueba la clave con una llamada minima a Gemma 4. Devuelve el resultado, nunca la clave."""
+    out = {"ok": False, "gemma": False, "reason": None}
+    try:
+        AMDBackend(model=AMD_MODEL, api_key=key, timeout=25.0, retries=0, min_interval=0.0).complete(
+            [{"role": "user", "content": "Say OK."}], max_tokens=8)
+        out["ok"] = out["gemma"] = True
+    except APIError as e:
+        text = str(e)
+        if text.startswith(("HTTP 401", "HTTP 403")):
             out["reason"] = "AMD rejected this key (invalid, expired or without access to Token Factory)."
-            return out
-        elif out["reason"] is None:
-            out["reason"] = ("AMD Token Factory did not answer in time." if "timed out" in err.lower() or "network" in err.lower()
-                             else "A model is not available right now.")
-    out["ok"] = out["gemma"] or out["backup"]
-    if out["ok"]:
-        out["reason"] = None if out["gemma"] else "Gemma 4 is not available now; MiMo (also on AMD) will answer."
+        elif "timed out" in text.lower() or "network" in text.lower():
+            out["reason"] = "AMD Token Factory did not answer in time. Try again in a moment."
+        else:
+            out["reason"] = "Gemma 4 is not available right now. Try again in a moment."
+    except Exception:  # noqa: BLE001
+        out["reason"] = "Could not check the key. Try again in a moment."
     return out
 
 

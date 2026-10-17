@@ -48,7 +48,7 @@ async function verifyKey() {
   try {
     const r = await checkKey();
     if (r.ok) {
-      say(keyMsg, r.gemma ? 'Key accepted. Gemma 4 is ready.' : (r.reason || 'Key accepted. A backup model on AMD will answer.'), 'ok');
+      say(keyMsg, 'Key accepted. Gemma 4 is ready.', 'ok');
       button.disabled = false;
     } else {
       say(keyMsg, r.reason || 'This key did not work.', 'bad');

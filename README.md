@@ -1,6 +1,8 @@
-# Affekt
+# Affekt: the demo of Affekt Core
 
-**NPCs that feel and remember.** Affekt is a narrative engine that gives game characters an emotional state, a three-layer memory and awareness of their world, so they answer players in character without inventing facts. Built for the **AMD Developer Hackathon: ACT III** (Track 4, Vibe Generation).
+This repository is the playable demo (Affekt Town) and the engine it runs on. **The product is Affekt Core**, the engine: standalone code is at [Nikotena/Affekt_core](https://github.com/Nikotena/Affekt_core/), and a copy lives here in `Affekt_core`.
+
+**NPCs that feel and remember.** Affekt Core is a narrative engine that gives game characters an emotional state, a three-layer memory and awareness of their world, so they answer players in character without inventing facts. Built for the **AMD Developer Hackathon: ACT III** (Track 4, Vibe Generation).
 
 - **Play it:** https://affekt-demo.vercel.app/ (opens the full game on Render)
 - **Engine only:** [Nikotena/Affekt_core](https://github.com/Nikotena/Affekt_core/) (the standalone core)
@@ -18,7 +20,7 @@ Plain, deterministic code decides what an NPC feels, remembers, knows and offers
 
 ## AMD
 
-Lines are written by **Gemma-4-31B-IT served on AMD GPUs through AMD Token Factory**, with MiMo-V2.6-Flash (also on AMD) as backup. A failing model is skipped for 45 s so the game keeps answering.
+Lines are written by **Gemma-4-31B-IT served on AMD GPUs through AMD Token Factory**. If the model fails or is slow, the character answers with a fallback line for its mood so the game keeps going.
 
 ## Bring your own key
 

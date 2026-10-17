@@ -21,12 +21,11 @@ que solo vive en la memoria de la pestana y viaja en la cabecera `X-AMD-Key`. Co
 personajes (nunca la clave).
 
 ## LLM
-La cadena de intentos es: **Gemma 4 en AMD Token Factory** -> **MiMo-V2.6-Flash en AMD**. El primero que responde gana; el que falla se salta 45 s. El primero espera como maximo 15 s
-sin reintentos. Si fallan todos, el NPC responde con su linea fija segun el humor. El panel indica que proveedor escribio
+El modelo es **Gemma 4 (Gemma-4-31B-IT) en AMD Token Factory**. Si falla o tarda mas de `AFFEKT_LLM_TIMEOUT` segundos, el NPC
+responde con su linea fija segun el humor. El panel indica que proveedor escribio
 cada linea (`LLM: AMD Token Factory · Gemma-4-31B-IT`).
 
 | Variable | Efecto |
 |---|---|
-| `AFFEKT_PRIMARY_TIMEOUT=15` | segundos que se espera a cada paso (menos el ultimo) antes de pasar al siguiente |
-| `AFFEKT_AMD_MODEL=<modelo>` | primer modelo de AMD (por defecto `Gemma-4-31B-IT`). Si Gemma esta saturada, `MiMo-V2.6-Flash` |
-| `AFFEKT_AMD_BACKUP_MODEL=<modelo>` | segundo modelo de AMD (por defecto `MiMo-V2.6-Flash`; `none` lo quita) |
+| `AFFEKT_LLM_TIMEOUT=25` | segundos que se espera al modelo en cada intento |
+| `AFFEKT_AMD_MODEL=<modelo>` | modelo de AMD Token Factory (por defecto `Gemma-4-31B-IT`) |
