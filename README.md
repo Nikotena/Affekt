@@ -24,7 +24,7 @@ Lines are written by **Gemma-4-31B-IT served on AMD GPUs through AMD Token Facto
 
 ## Bring your own key
 
-The public demo does not ship a model key. Paste your own **AMD Token Factory API key** on the start screen:
+By default (`AFFEKT_BYOK=1`) the server does not ship a model key; the live demo can instead run with the server's own key (`AFFEKT_BYOK=0`) while it is being evaluated. In bring-your-own-key mode, paste your own **AMD Token Factory API key** on the start screen:
 
 - it lives only in that browser tab's memory, is never written to storage, logs or the session file;
 - it is sent over HTTPS in the `X-AMD-Key` header, used for that one request and discarded.
